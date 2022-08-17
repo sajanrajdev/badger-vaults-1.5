@@ -836,7 +836,7 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         if (feeStrategist != 0 && strategist != address(0)) {
             /// NOTE: adding feeGovernance backed to _pool as shares would have been issued for it.
             _mintSharesFor(strategist, feeStrategist, _pool.add(totalGovernanceFee));
-            emit PerformanceFeeStrategist(strategist, _token, feeStrategist, block.number, block.timestamp);
+            emit PerformanceFeeStrategist(strategist, address(this), feeStrategist, block.number, block.timestamp);
         }
     }
 }
