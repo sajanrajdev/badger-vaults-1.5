@@ -124,6 +124,13 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
 
     // Emitted during a report, when there has been an increase in pricePerFullShare (ppfs)
     event Harvested(address indexed token, uint256 amount, uint256 indexed blockNumber, uint256 timestamp);
+    event PerformanceFeeGovernance(
+        address indexed destination,
+        address indexed token,
+        uint256 amount,
+        uint256 indexed blockNumber,
+        uint256 timestamp
+    );
 
     event SetTreasury(address indexed newTreasury);
     event SetStrategy(address indexed newStrategy);
@@ -407,7 +414,7 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
 
         if(governanceRewardsFee != 0) {
             IERC20Upgradeable(_token).safeTransfer(treasury, governanceRewardsFee);
-
+            emit PerformanceFeeGovernance(treasury, _token, governanceRewardsFee, block.number, block.timestamp);
         }
 
         if(strategistRewardsFee != 0) {
@@ -807,6 +814,7 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         // uint != is cheaper and equivalent to >
         if (totalGovernanceFee != 0) {
             _mintSharesFor(treasury, totalGovernanceFee, _pool);
+            emit PerformanceFeeGovernance(treasury, address(this), totalGovernanceFee, block.number, block.timestamp);
         }
 
         if (feeStrategist != 0 && strategist != address(0)) {
