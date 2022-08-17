@@ -131,6 +131,20 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         uint256 indexed blockNumber,
         uint256 timestamp
     );
+    event PerformanceFeeStrategist(
+        address indexed destination,
+        address indexed token,
+        uint256 amount,
+        uint256 indexed blockNumber,
+        uint256 timestamp
+    );
+    event WithdrawFee(
+        address indexed destination,
+        address indexed token,
+        uint256 amount,
+        uint256 indexed blockNumber,
+        uint256 timestamp
+    );
 
     event SetTreasury(address indexed newTreasury);
     event SetStrategy(address indexed newStrategy);
@@ -419,6 +433,7 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
 
         if(strategistRewardsFee != 0) {
             IERC20Upgradeable(_token).safeTransfer(strategist, strategistRewardsFee);
+            emit PerformanceFeeStrategist(strategist, _token, strategistRewardsFee, block.number, block.timestamp);
         }
 
         // Send rest to tree
@@ -744,6 +759,7 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         // Process withdrawal fee
         if(_fee > 0) {
             _mintSharesFor(treasury, _fee, balance().sub(_fee));
+            emit WithdrawFee(treasury, address(this), _fee, block.number, block.timestamp);
         }
     }
 
@@ -820,6 +836,7 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         if (feeStrategist != 0 && strategist != address(0)) {
             /// NOTE: adding feeGovernance backed to _pool as shares would have been issued for it.
             _mintSharesFor(strategist, feeStrategist, _pool.add(totalGovernanceFee));
+            emit PerformanceFeeStrategist(strategist, _token, feeStrategist, block.number, block.timestamp);
         }
     }
 }
