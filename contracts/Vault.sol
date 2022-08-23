@@ -55,6 +55,9 @@ import {BadgerGuestListAPI} from "../interfaces/yearn/BadgerGuestlistApi.sol";
         - Governance will determine maxPerformanceFee, maxWithdrawalFee, maxManagementFee that can be set to prevent rug of funds.
     * Strategy would take the actors from the vault it is connected to
     * All governance related fees goes to treasury
+    
+    V1.5.1
+    * Added Events for `PerformanceFeeGovernance`, `PerformanceFeeStrategist` and `WithdrawalFee`
 */
 
 contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, ReentrancyGuardUpgradeable {
