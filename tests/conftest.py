@@ -180,6 +180,16 @@ def want(deployed):
 
 
 @pytest.fixture
+def token_not_want(deployer):
+    # use for testing `_processExtraToken`
+    token = MockToken.deploy({"from": deployer})
+
+    token.initialize([deployer.address], [100e18])
+
+    return token
+
+
+@pytest.fixture
 def tokens(deployed):
     return [deployed.want]
 

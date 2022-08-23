@@ -124,6 +124,27 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
 
     // Emitted during a report, when there has been an increase in pricePerFullShare (ppfs)
     event Harvested(address indexed token, uint256 amount, uint256 indexed blockNumber, uint256 timestamp);
+    event PerformanceFeeGovernance(
+        address indexed destination,
+        address indexed token,
+        uint256 amount,
+        uint256 indexed blockNumber,
+        uint256 timestamp
+    );
+    event PerformanceFeeStrategist(
+        address indexed destination,
+        address indexed token,
+        uint256 amount,
+        uint256 indexed blockNumber,
+        uint256 timestamp
+    );
+    event WithdrawalFee(
+        address indexed destination,
+        address indexed token,
+        uint256 amount,
+        uint256 indexed blockNumber,
+        uint256 timestamp
+    );
 
     event SetTreasury(address indexed newTreasury);
     event SetStrategy(address indexed newStrategy);
@@ -406,12 +427,15 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         uint256 strategistRewardsFee = _calculateFee(tokenBalance, performanceFeeStrategist);
 
         if(governanceRewardsFee != 0) {
-            IERC20Upgradeable(_token).safeTransfer(treasury, governanceRewardsFee);
-
+            address cachedTreasury = treasury;
+            IERC20Upgradeable(_token).safeTransfer(cachedTreasury, governanceRewardsFee);
+            emit PerformanceFeeGovernance(cachedTreasury, _token, governanceRewardsFee, block.number, block.timestamp);
         }
 
         if(strategistRewardsFee != 0) {
-            IERC20Upgradeable(_token).safeTransfer(strategist, strategistRewardsFee);
+            address cachedStrategist = strategist;
+            IERC20Upgradeable(_token).safeTransfer(cachedStrategist, strategistRewardsFee);
+            emit PerformanceFeeStrategist(cachedStrategist, _token, strategistRewardsFee, block.number, block.timestamp);
         }
 
         // Send rest to tree
@@ -736,7 +760,9 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         // After you burned the shares, and you have sent the funds, adding here is equivalent to depositing
         // Process withdrawal fee
         if(_fee > 0) {
-            _mintSharesFor(treasury, _fee, balance().sub(_fee));
+            address cachedTreasury = treasury;
+            _mintSharesFor(cachedTreasury, _fee, balance().sub(_fee));
+            emit WithdrawalFee(cachedTreasury, address(this), _fee, block.number, block.timestamp);
         }
     }
 
@@ -806,12 +832,16 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
 
         // uint != is cheaper and equivalent to >
         if (totalGovernanceFee != 0) {
-            _mintSharesFor(treasury, totalGovernanceFee, _pool);
+            address cachedTreasury = treasury;
+            _mintSharesFor(cachedTreasury, totalGovernanceFee, _pool);
+            emit PerformanceFeeGovernance(cachedTreasury, address(this), totalGovernanceFee, block.number, block.timestamp);
         }
 
         if (feeStrategist != 0 && strategist != address(0)) {
             /// NOTE: adding feeGovernance backed to _pool as shares would have been issued for it.
-            _mintSharesFor(strategist, feeStrategist, _pool.add(totalGovernanceFee));
+            address cachedStrategist = strategist;
+            _mintSharesFor(cachedStrategist, feeStrategist, _pool.add(totalGovernanceFee));
+            emit PerformanceFeeStrategist(cachedStrategist, address(this), feeStrategist, block.number, block.timestamp);
         }
     }
 }
