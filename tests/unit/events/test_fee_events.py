@@ -6,11 +6,19 @@ def test_withdrawal_fee_event(vault, want, deployer, governance):
     depositAmount = int(want.balanceOf(deployer) * 0.1)
     want.approve(vault.address, depositAmount, {"from": deployer})
     vault.deposit(depositAmount, {"from": deployer})
+
+    # Transfer want tokens to vault to increase ppfs
+    assert vault.getPricePerFullShare() == 1e18
+    want.transfer(vault.address, depositAmount // 2)
+    assert vault.getPricePerFullShare() != 1e18
+
     vault.earn({"from": governance})
 
     # internally will trigger _withdraw which contains target event
-    withdraw_amount = depositAmount // 10
-    tx = vault.withdraw(withdraw_amount, {"from": deployer})
+    withdraw_amount = depositAmount // 10 # Expected underlying
+    withdraw_amount_shares = (withdraw_amount * vault.balance()) / vault.totalSupply()
+    assert withdraw_amount != withdraw_amount_shares
+    tx = vault.withdraw(withdraw_amount_shares, {"from": deployer})
 
     wd_fee_event = tx.events["WithdrawalFee"]
 
@@ -21,7 +29,7 @@ def test_withdrawal_fee_event(vault, want, deployer, governance):
     assert wd_fee_event["token"] == vault.address
     assert (
         wd_fee_event["amount"]
-        == vault.withdrawalFee() * withdraw_amount / vault.MAX_BPS()
+        == vault.withdrawalFee() * withdraw_amount_shares / vault.MAX_BPS()
     )
 
 
@@ -52,6 +60,8 @@ def test_perf_fee_gov_event(
     # needs to leverage these methods from DemoStrategy to trigger events as will do a real strat
     # check 1st `reportHarvest` route of events emitted in harvest
     amount_harvested = 1e18
+    total_supply_before = vault.totalSupply()
+
     prev_harvest_ts = vault.lastHarvestedAt()
 
     tx = strategy.test_harvest(amount_harvested, {"from": keeper})
@@ -70,6 +80,18 @@ def test_perf_fee_gov_event(
         / vault.SECS_PER_YEAR()
         / vault.MAX_BPS()
     )
+    governance_fee_want = amount_harvested * vault.performanceFeeGovernance() / vault.MAX_BPS() + management_fee
+    strategist_fee_want = amount_harvested * vault.performanceFeeStrategist() / vault.MAX_BPS()
+    pool = vault.balance() - governance_fee_want - strategist_fee_want
+
+    governance_fee_shares = governance_fee_want * total_supply_before / pool
+    strategist_fee_shares = strategist_fee_want * (total_supply_before + governance_fee_shares) / (pool + governance_fee_want)
+    # Total supply incremented by the minted fee shares
+    assert approx(
+        vault.totalSupply(),
+        total_supply_before + governance_fee_shares + strategist_fee_shares,
+        1
+    )
 
     assert len(perf_fee_gov_event) == 1 and len(perf_fee_strategist_event) == 1
     assert (
@@ -83,15 +105,17 @@ def test_perf_fee_gov_event(
     assert (
         approx(
             perf_fee_gov_event["amount"],
-            amount_harvested * vault.performanceFeeGovernance() / vault.MAX_BPS()
-            + management_fee,
+            governance_fee_shares,
             1,
         )
-        and perf_fee_strategist_event["amount"]
-        == amount_harvested * vault.performanceFeeStrategist() / vault.MAX_BPS()
+        and approx(
+            perf_fee_strategist_event["amount"],
+            strategist_fee_shares,
+            1,
+        )
     )
 
-    # chec 2nd `reportAdditionalToken` route of events emitted in harvest
+    # Chek 2nd `reportAdditionalToken` route of events emitted in harvest
     token_not_want.transfer(strategy, amount_harvested, {"from": deployer})
     tx = strategy.test_harvest_only_emit(
         token_not_want, amount_harvested, {"from": keeper}
