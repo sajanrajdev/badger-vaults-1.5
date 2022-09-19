@@ -115,7 +115,7 @@ def test_perf_fee_gov_event(
         )
     )
 
-    # Chek 2nd `reportAdditionalToken` route of events emitted in harvest
+    # Check 2nd `reportAdditionalToken` route of events emitted in harvest
     token_not_want.transfer(strategy, amount_harvested, {"from": deployer})
     tx = strategy.test_harvest_only_emit(
         token_not_want, amount_harvested, {"from": keeper}
