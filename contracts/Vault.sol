@@ -800,6 +800,7 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
     /// @param recipient Address to issue shares to.
     /// @param _amount Amount to issue shares on.
     /// @param _pool Pool size to use while calculating amount of shares to mint.
+    /// @return shares Amount of shares minted
     function _mintSharesFor(
         address recipient,
         uint256 _amount,
