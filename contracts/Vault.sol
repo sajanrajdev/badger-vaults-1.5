@@ -58,6 +58,9 @@ import {BadgerGuestListAPI} from "../interfaces/yearn/BadgerGuestlistApi.sol";
     
     V1.5.1
     * Added Events for `PerformanceFeeGovernance`, `PerformanceFeeStrategist` and `WithdrawalFee`
+
+    V1.5.2
+    * Fixed Events to emit share instead of underlying
 */
 
 contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, ReentrancyGuardUpgradeable {
