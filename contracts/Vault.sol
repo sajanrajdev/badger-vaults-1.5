@@ -59,7 +59,7 @@ import {BadgerGuestListAPI} from "../interfaces/yearn/BadgerGuestlistApi.sol";
     V1.5.1
     * Added Events for `PerformanceFeeGovernance`, `PerformanceFeeStrategist` and `WithdrawalFee`
 
-    V1.5.2
+    V1.5.2.a
     * Fixed Events to emit share instead of underlying
 */
 
