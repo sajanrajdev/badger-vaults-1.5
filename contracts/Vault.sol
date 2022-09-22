@@ -58,6 +58,9 @@ import {BadgerGuestListAPI} from "../interfaces/yearn/BadgerGuestlistApi.sol";
     
     V1.5.1
     * Added Events for `PerformanceFeeGovernance`, `PerformanceFeeStrategist` and `WithdrawalFee`
+
+    V1.5.2.a
+    * Fixed Events to emit share instead of underlying
 */
 
 contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, ReentrancyGuardUpgradeable {
@@ -474,7 +477,7 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         require(_strategy != address(0), "Address 0");
 
 
-        /// NOTE: Migrate funds if settings strategy when already existing one
+        // NOTE: Migrate funds if settings strategy when already existing one
         if (strategy != address(0)) {
             require(IStrategy(strategy).balanceOf() == 0, "Please withdrawToVault before changing strat");
         }
@@ -764,8 +767,8 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         // Process withdrawal fee
         if(_fee > 0) {
             address cachedTreasury = treasury;
-            _mintSharesFor(cachedTreasury, _fee, balance().sub(_fee));
-            emit WithdrawalFee(cachedTreasury, address(this), _fee, block.number, block.timestamp);
+            uint256 feeInShares = _mintSharesFor(cachedTreasury, _fee, balance().sub(_fee));
+            emit WithdrawalFee(cachedTreasury, address(this), feeInShares, block.number, block.timestamp);
         }
     }
 
@@ -800,12 +803,12 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
     /// @param recipient Address to issue shares to.
     /// @param _amount Amount to issue shares on.
     /// @param _pool Pool size to use while calculating amount of shares to mint.
+    /// @return shares Amount of shares minted
     function _mintSharesFor(
         address recipient,
         uint256 _amount,
         uint256 _pool
-    ) internal {
-        uint256 shares;
+    ) internal returns (uint256 shares) {
         if (totalSupply() == 0) {
             shares = _amount;
         } else {
@@ -833,18 +836,21 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         // and depositing them again
         uint256 _pool = balance().sub(totalGovernanceFee).sub(feeStrategist);
 
+        // Minted fee shares for accounting events 
+        uint256 feeInShares;
+
         // uint != is cheaper and equivalent to >
         if (totalGovernanceFee != 0) {
             address cachedTreasury = treasury;
-            _mintSharesFor(cachedTreasury, totalGovernanceFee, _pool);
-            emit PerformanceFeeGovernance(cachedTreasury, address(this), totalGovernanceFee, block.number, block.timestamp);
+            feeInShares = _mintSharesFor(cachedTreasury, totalGovernanceFee, _pool);
+            emit PerformanceFeeGovernance(cachedTreasury, address(this), feeInShares, block.number, block.timestamp);
         }
 
         if (feeStrategist != 0 && strategist != address(0)) {
-            /// NOTE: adding feeGovernance backed to _pool as shares would have been issued for it.
+            // NOTE: adding feeGovernance backed to _pool as shares would have been issued for it.
             address cachedStrategist = strategist;
-            _mintSharesFor(cachedStrategist, feeStrategist, _pool.add(totalGovernanceFee));
-            emit PerformanceFeeStrategist(cachedStrategist, address(this), feeStrategist, block.number, block.timestamp);
+            feeInShares = _mintSharesFor(cachedStrategist, feeStrategist, _pool.add(totalGovernanceFee));
+            emit PerformanceFeeStrategist(cachedStrategist, address(this), feeInShares, block.number, block.timestamp);
         }
     }
 }
