@@ -477,7 +477,7 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         require(_strategy != address(0), "Address 0");
 
 
-        /// NOTE: Migrate funds if settings strategy when already existing one
+        // NOTE: Migrate funds if settings strategy when already existing one
         if (strategy != address(0)) {
             require(IStrategy(strategy).balanceOf() == 0, "Please withdrawToVault before changing strat");
         }
@@ -847,7 +847,7 @@ contract Vault is ERC20Upgradeable, SettAccessControl, PausableUpgradeable, Reen
         }
 
         if (feeStrategist != 0 && strategist != address(0)) {
-            /// NOTE: adding feeGovernance backed to _pool as shares would have been issued for it.
+            // NOTE: adding feeGovernance backed to _pool as shares would have been issued for it.
             address cachedStrategist = strategist;
             feeInShares = _mintSharesFor(cachedStrategist, feeStrategist, _pool.add(totalGovernanceFee));
             emit PerformanceFeeStrategist(cachedStrategist, address(this), feeInShares, block.number, block.timestamp);
